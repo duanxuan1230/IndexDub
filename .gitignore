@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+.venv/
+
+# Runtime artifacts
+temp/
+output/
+
+# Large model files (user downloads separately)
+index-tts/checkpoints/
+
+# Large video files (user provides their own)
+example/*.mkv
+example/*.mp4
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+discuss/

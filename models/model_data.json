@@ -1,0 +1,7 @@
+{
+    "UVR-MDX-NET-Inst_HQ_3.onnx": {
+        "checksum": "55657dd70583b0fedfba5f67df11d711",
+        "url": "https://huggingface.co/seanghay/uvr_models/resolve/main/UVR-MDX-NET-Inst_HQ_3.onnx",
+        "download_path": "UVR-MDX-NET-Inst_HQ_3.onnx"
+    }
+}

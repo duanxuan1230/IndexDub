@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(dir /s /b \"d:\\\\IndexDub\\\\index-tts\\\\checkpoints\\\\hf_cache\\\\models--facebook--w2v-bert-2.0\\\\*config*\")",
+      "Bash(ffprobe:*)",
+      "Bash(ffmpeg:*)",
+      "Bash(findstr:*)",
+      "Bash(cmd /c \"dir d:\\\\IndexDub\\\\temp\\\\intermediate\\\\*mixed* /b\")",
+      "Bash(.venvScriptspython.exe -c \"from src.pipeline import Pipeline, ProjectManifest; print\\(''Import OK''\\)\")",
+      "Bash(cmd /c \"cd /d d:\\\\IndexDub && d:\\\\IndexDub\\\\.venv\\\\Scripts\\\\python.exe -c \"\"from src.pipeline import Pipeline, ProjectManifest; print\\(''Import OK''\\)\"\"\")",
+      "Bash(cmd /c \"d:\\\\IndexDub\\\\.venv\\\\Scripts\\\\python.exe -c \"\"import ast; ast.parse\\(open\\(r''d:\\\\IndexDub\\\\src\\\\pipeline.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''Syntax OK''\\)\"\"\")",
+      "Bash(.venvScriptspython.exe -c \"import ast; ast.parse\\(open\\(r''src/subtitle_parser.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''Syntax OK''\\)\")",
+      "Bash(d:/IndexDub/.venv/Scripts/python.exe:*)",
+      "Bash(ls:*)",
+      "Bash(dir:*)"
+    ]
+  }
+}
