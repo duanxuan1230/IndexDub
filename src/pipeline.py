@@ -483,6 +483,7 @@ class Pipeline:
             print(f"  √ 跳过分离（人声和背景音文件已存在）")
             self.manifest.vocal_track = str(vocals_path)
             self.manifest.bgm_track = str(bgm_path)
+            self.manifest.stages_status["extract"] = "completed"
             self.save_manifest()
             return
 
@@ -506,6 +507,7 @@ class Pipeline:
             print(f"  警告: 音频分离失败 ({e})，回退到使用原始音频作为人声")
             self.manifest.vocal_track = str(full_audio_path)
             self.manifest.bgm_track = None
+            self.manifest.stages_status["extract"] = "completed"
         
         self.save_manifest()
     

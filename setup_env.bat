@@ -32,6 +32,18 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+:: 4. Install audio-separator (vocal/BGM separation)
+:: Installed separately to avoid dependency conflicts with descript-audiotools (protobuf/numpy version mismatch)
+echo [Setup] Installing audio-separator for vocal/BGM separation...
+uv pip install onnxruntime-gpu
+uv pip install --no-deps audio-separator
+uv pip install onnx onnx2torch
+uv pip install "protobuf>=3.20.2,<4.0"
+
+if %errorlevel% neq 0 (
+    echo [Warning] audio-separator installation failed. Vocal/BGM separation may not work.
+)
+
 echo.
 echo [Success] Environment is ready!
 echo [Info] To activate: call .venv\Scripts\activate

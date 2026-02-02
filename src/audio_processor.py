@@ -4,6 +4,7 @@
 """
 import subprocess
 import shutil
+import sys
 import time
 import json
 from pathlib import Path
@@ -407,9 +408,15 @@ class AudioProcessor:
         # [Optimization] 使用本地已下载的模型
         # 我们已经手动下载了 UVR-MDX-NET-Inst_HQ_3.onnx 到 d:\IndexDub\models
         models_dir = Path(config.project_root) / "models"
-        
+
+        # 使用 .venv 中的 audio-separator（共享 CUDA PyTorch，支持 GPU 加速）
+        # 避免 uv run --with 创建临时环境（只有 CPU PyTorch，分离极慢）
+        audio_sep_exe = Path(sys.executable).parent / "audio-separator.exe"
+        if not audio_sep_exe.exists():
+            audio_sep_exe = Path(sys.executable).parent / "audio-separator"
+
         cmd = [
-            "uv", "run", "--with", "audio-separator[gpu,onnxruntime-gpu]", "audio-separator",
+            str(audio_sep_exe),
             input_path,
             "--output_dir", str(out_path),
             "--model_filename", "UVR-MDX-NET-Inst_HQ_3.onnx",

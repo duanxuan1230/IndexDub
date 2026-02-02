@@ -16,6 +16,12 @@ output/
 # Large model files (user downloads separately)
 index-tts/checkpoints/
 
+# index-tts runtime artifacts
+index-tts/outputs/
+index-tts/cache/
+index-tts/uv.lock
+index-tts/venv_check.txt
+
 # Large video files (user provides their own)
 example/*.mkv
 example/*.mp4
