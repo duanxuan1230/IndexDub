@@ -4,6 +4,8 @@
 """
 import subprocess
 import shutil
+import tempfile
+import os
 from pathlib import Path
 from typing import List
 
@@ -190,9 +192,6 @@ class AudioMerger:
         print(f">> 混合音频已保存: {output}")
         return str(output)
     
-    # 间隙人声包络：表达式长度安全上限（避免 Windows 命令行过长）
-    _MAX_EXPR_LENGTH = 6000
-
     @staticmethod
     def _merge_mute_regions(regions: list, merge_threshold: float) -> list:
         """
@@ -262,34 +261,6 @@ class AudioMerger:
 
         return f"1-{max_expr}"
 
-    def _build_envelope_filter(self, regions: list, fade_dur: float,
-                               total_duration: float) -> str:
-        """
-        构建 FFmpeg -af 滤镜字符串。
-        表达式短时用单个 volume=expr，过长时分批链式。
-        """
-        expr = self._build_trapezoid_expr(regions, fade_dur, total_duration)
-        if len(expr) <= self._MAX_EXPR_LENGTH:
-            return f"volume='{expr}':eval=frame"
-
-        # 回退：分批链式 volume 滤镜
-        print(f"  [Info] 表达式长度 ({len(expr)} 字符) 超限，使用分批滤镜")
-        return self._build_batched_envelope_filter(regions, fade_dur, total_duration)
-
-    def _build_batched_envelope_filter(self, regions: list, fade_dur: float,
-                                       total_duration: float) -> str:
-        """
-        分批构建链式 volume 滤镜。
-        合并后区域不重叠，分批乘积等价于单表达式结果。
-        """
-        batch_size = 40
-        filter_parts = []
-        for i in range(0, len(regions), batch_size):
-            batch = regions[i:i + batch_size]
-            expr = self._build_trapezoid_expr(batch, fade_dur, total_duration)
-            filter_parts.append(f"volume='{expr}':eval=frame")
-        return ",".join(filter_parts)
-
     def create_gap_vocal_track(self, vocal_path: str, segments: List[Segment],
                                total_duration: float, output_path: str,
                                time_offset: float = 0) -> str:
@@ -348,24 +319,35 @@ class AudioMerger:
               f"{len(merged_regions)} 个静音区域, "
               f"淡变={fade_dur*1000:.0f}ms, 合并阈值={merge_threshold*1000:.0f}ms)...")
 
-        # 构建平滑音量包络滤镜
-        af_filter = self._build_envelope_filter(merged_regions, fade_dur, total_duration)
+        # 构建平滑音量包络滤镜，写入临时文件通过 -filter_script:a 传递给 FFmpeg
+        expr = self._build_trapezoid_expr(merged_regions, fade_dur, total_duration)
+        af_filter = f"volume='{expr}':eval=frame"
 
-        cmd = [
-            self.ffmpeg, "-y",
-            "-i", vocal_path,
-            "-af", af_filter,
-            "-ar", str(config.sample_rate),
-            "-ac", "1",
-            "-t", str(total_duration),
-            str(output)
-        ]
+        fd, filter_script_path = tempfile.mkstemp(
+            suffix='.txt', prefix='ffmpeg_filter_',
+            dir=str(output.parent))
+        try:
+            with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                f.write(af_filter)
 
-        result = subprocess.run(cmd, capture_output=True, text=True,
-                                encoding='utf-8', errors='replace')
-        if result.returncode != 0:
-            print(f"FFmpeg stderr: {result.stderr}")
-            raise RuntimeError(f"生成间隙人声轨失败: {result.stderr[:300]}")
+            cmd = [
+                self.ffmpeg, "-y",
+                "-i", vocal_path,
+                "-filter_script:a", filter_script_path,
+                "-ar", str(config.sample_rate),
+                "-ac", "1",
+                "-t", str(total_duration),
+                str(output)
+            ]
+
+            result = subprocess.run(cmd, capture_output=True, text=True,
+                                    encoding='utf-8', errors='replace')
+            if result.returncode != 0:
+                print(f"FFmpeg stderr: {result.stderr}")
+                raise RuntimeError(f"生成间隙人声轨失败: {result.stderr[:300]}")
+        finally:
+            if os.path.exists(filter_script_path):
+                os.remove(filter_script_path)
 
         print(f">> 间隙人声轨已保存: {output}")
         return str(output)
