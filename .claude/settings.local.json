@@ -13,7 +13,10 @@
       "Bash(.venvScriptspython.exe -c \"import ast; ast.parse\\(open\\(r''src/subtitle_parser.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''Syntax OK''\\)\")",
       "Bash(d:/IndexDub/.venv/Scripts/python.exe:*)",
       "Bash(ls:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:www.ffmpeg.org)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

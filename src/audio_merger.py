@@ -217,7 +217,8 @@ class AudioMerger:
 
         每个静音区域 [S, E] 的梯形：
             clip((t-(S-F))/F, 0, 1) * clip(((E+F)-t)/F, 0, 1)
-        组合：volume = 1 - max(所有梯形)
+        组合：st(0,trap1); st(0,max(ld(0),trap2)); ...; 1-ld(0)
+        使用 st()/ld() 线性链式求值，避免嵌套超过 FFmpeg 99 层限制。
         """
         if not regions:
             return "1"
@@ -251,15 +252,16 @@ class AudioMerger:
             else:
                 trapezoids.append(f"{left}*{right}")
 
-        # 用嵌套 max(a, b) 组合（FFmpeg max() 仅支持2参数）
+        # 用 st(0)/ld(0) 线性链式求值，避免嵌套过深
+        # FFmpeg 表达式解析器限制 ~99 层嵌套 (stack_index=100)
         if len(trapezoids) == 1:
-            max_expr = trapezoids[0]
-        else:
-            max_expr = trapezoids[-1]
-            for i in range(len(trapezoids) - 2, -1, -1):
-                max_expr = f"max({trapezoids[i]},{max_expr})"
+            return f"1-{trapezoids[0]}"
 
-        return f"1-{max_expr}"
+        parts = [f"st(0,{trapezoids[0]})"]
+        for trap in trapezoids[1:]:
+            parts.append(f"st(0,max(ld(0),{trap}))")
+        parts.append("1-ld(0)")
+        return ";".join(parts)
 
     def create_gap_vocal_track(self, vocal_path: str, segments: List[Segment],
                                total_duration: float, output_path: str,
