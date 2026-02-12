@@ -1,0 +1,11 @@
+{
+  "entries": [
+    {
+      "video": "input/EP01.mkv",
+      "subtitle": "input/EP01.chs.srt",
+      "status": "pending",
+      "output": null,
+      "error": null
+    }
+  ]
+}

@@ -16,7 +16,8 @@
       "Bash(dir:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:www.ffmpeg.org)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(if not exist \"d:\\\\IndexDub\\\\input\" mkdir \"d:\\\\IndexDub\\\\input\")"
     ]
   }
 }

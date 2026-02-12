@@ -11,6 +11,7 @@
 - 两遍 EBU R128 响度标准化，音量一致
 - 非配音区间原声保留（笑声、哭声、歌声等）
 - 断点续传，中断后可继续处理
+- 批量处理，多集一次命令完成
 - 阿拉伯数字自动转中文读法
 
 ## 系统要求
@@ -136,6 +137,43 @@ run.bat --start-time 600 --end-time 750 --max-segments 50
 run.bat --full
 ```
 
+### 批量处理多集
+
+1. 将视频和字幕文件放入 `input/` 目录
+2. 编辑 `input/batch.json`，填入每集的视频和字幕路径：
+
+```json
+{
+  "entries": [
+    {
+      "video": "input/EP01.mkv",
+      "subtitle": "input/EP01.chs.srt",
+      "status": "pending",
+      "output": null,
+      "error": null
+    },
+    {
+      "video": "input/EP02.mkv",
+      "subtitle": "input/EP02.chs.srt",
+      "status": "pending",
+      "output": null,
+      "error": null
+    }
+  ]
+}
+```
+
+3. 执行批处理：
+
+```bash
+run.bat --batch --full
+```
+
+- TTS 模型只加载一次，所有集共享，大幅节省时间
+- 某集失败会跳过并继续下一集，错误信息记录在 JSON 中
+- 重新运行时自动跳过已完成的集（`status: "completed"`）
+- 使用 `--force` 强制全部重新处理
+
 ### 强制从头开始
 
 ```bash
@@ -164,6 +202,7 @@ output/{项目名}_dubbed.mp4
 | `--start-time` | 开始时间（秒） | 60 |
 | `--end-time` | 结束时间（秒） | 180 |
 | `--force` | 强制重新运行（清除所有中间文件） | False |
+| `--batch` | 批处理模式（读取 `input/batch.json`） | False |
 
 ## 处理流程
 
@@ -189,11 +228,13 @@ IndexDub/
 ├── src/                    # 源代码
 │   ├── config.py           # 全局配置
 │   ├── pipeline.py         # 主流程控制
+│   ├── batch_runner.py     # 批量处理控制器
 │   ├── subtitle_parser.py  # 字幕解析（SRT/ASS）
 │   ├── audio_processor.py  # 音频处理（裁剪/降噪/标准化）
 │   ├── tts_engine.py       # TTS 引擎封装
 │   └── audio_merger.py     # 音频混合与视频合成
-├── example/                # 素材目录（视频 + 字幕）
+├── input/                  # 批处理输入目录（视频 + 字幕 + batch.json）
+├── example/                # 单集示例素材
 ├── temp/                   # 运行时临时文件
 ├── output/                 # 最终输出
 ├── main.py                 # 程序入口

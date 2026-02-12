@@ -82,31 +82,65 @@ def main():
         action="store_true",
         help="强制从头开始（忽略已完成的状态和文件）"
     )
+
+    parser.add_argument(
+        "--batch",
+        action="store_true",
+        help="批处理模式: 读取 input/batch.json 逐集处理"
+    )
     
     args = parser.parse_args()
-    
-    # 处理路径
+
     project_root = Path(__file__).parent
-    video_path = project_root / args.video
-    subtitle_path = project_root / args.subtitle
-    
-    # 检查文件存在
-    if not video_path.exists():
-        print(f"错误: 视频文件不存在: {video_path}")
-        sys.exit(1)
-    
-    if not subtitle_path.exists():
-        print(f"错误: 字幕文件不存在: {subtitle_path}")
-        sys.exit(1)
-    
+
     # 更新 Demo 配置
     demo_mode = not args.full
     if demo_mode:
         config.demo_max_segments = args.max_segments
         config.demo_start_time = args.start_time
         config.demo_end_time = args.end_time
-    
-    # 运行流程
+
+    # 批处理模式
+    if args.batch:
+        from src.batch_runner import BatchRunner
+
+        batch_json = project_root / "input" / "batch.json"
+        if not batch_json.exists():
+            print(f"错误: 未找到 {batch_json}")
+            print(f"\n请创建 input/batch.json，格式示例:")
+            print('''{
+  "entries": [
+    {
+      "video": "input/EP01.mkv",
+      "subtitle": "input/EP01.chs.srt",
+      "status": "pending",
+      "output": null,
+      "error": null
+    }
+  ]
+}''')
+            sys.exit(1)
+
+        runner = BatchRunner(
+            batch_json_path=str(batch_json),
+            demo_mode=demo_mode,
+            force_run=args.force
+        )
+        runner.run()
+        return
+
+    # 单集模式
+    video_path = project_root / args.video
+    subtitle_path = project_root / args.subtitle
+
+    if not video_path.exists():
+        print(f"错误: 视频文件不存在: {video_path}")
+        sys.exit(1)
+
+    if not subtitle_path.exists():
+        print(f"错误: 字幕文件不存在: {subtitle_path}")
+        sys.exit(1)
+
     pipeline = Pipeline(
         video_path=str(video_path),
         subtitle_path=str(subtitle_path),
@@ -114,13 +148,13 @@ def main():
         demo_mode=demo_mode,
         force_run=args.force
     )
-    
+
     try:
         output_video = pipeline.run()
-        print(f"\n✓ 成功! 输出文件: {output_video}")
-        
+        print(f"\n成功! 输出文件: {output_video}")
+
     except Exception as e:
-        print(f"\n✗ 错误: {e}")
+        print(f"\n错误: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

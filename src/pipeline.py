@@ -95,9 +95,10 @@ class ProjectManifest:
 class Pipeline:
     """主流程控制器"""
     
-    def __init__(self, video_path: str, subtitle_path: str, 
+    def __init__(self, video_path: str, subtitle_path: str,
                  output_dir: str = None, project_name: str = None,
-                 demo_mode: bool = True, force_run: bool = False):
+                 demo_mode: bool = True, force_run: bool = False,
+                 tts_engine=None):
         """
         初始化流程控制器
         
@@ -108,6 +109,7 @@ class Pipeline:
             project_name: 项目名称
             demo_mode: 是否为 Demo 模式（只处理部分片段）
             force_run: 是否强制重新运行
+            tts_engine: 外部 TTS 引擎实例（批处理模式复用，None 则内部创建）
         """
         self.video_path = Path(video_path)
         self.subtitle_path = Path(subtitle_path)
@@ -159,11 +161,18 @@ class Pipeline:
         # 初始化组件
         self.subtitle_parser = SubtitleParser()
         self.audio_processor = AudioProcessor()
-        self.tts_engine = None  # 延迟加载
+        self.tts_engine = tts_engine  # 外部传入或 None（延迟加载）
+        self._owns_tts_engine = tts_engine is None
         self.audio_merger = AudioMerger()
         
         # 确保目录存在
         config.ensure_dirs()
+
+        # Per-project segment 子目录（避免多项目文件名冲突）
+        self.segments_dir = config.segments_dir / self.project_name
+        self.output_segments_dir = config.output_segments_dir / self.project_name
+        self.segments_dir.mkdir(parents=True, exist_ok=True)
+        self.output_segments_dir.mkdir(parents=True, exist_ok=True)
     
     def save_manifest(self):
         """保存项目状态"""
@@ -197,20 +206,20 @@ class Pipeline:
                         cleaned_files.append(f"intermediate/{file.name}")
 
             # 4. 清理 segments 目录 (所有 seg_*.wav 和 ref_*.wav)
-            if config.segments_dir.exists():
+            if self.segments_dir.exists():
                 count = 0
                 for pattern in ["seg_*.wav", "ref_*.wav"]:
-                    for file in config.segments_dir.glob(pattern):
+                    for file in self.segments_dir.glob(pattern):
                         file.unlink()
                         count += 1
                 if count > 0:
                     cleaned_dirs.append(f"segments/ ({count} 个音频片段)")
 
             # 5. 清理 output 目录 (所有 dub_*.wav)
-            if config.output_segments_dir.exists():
+            if self.output_segments_dir.exists():
                 count = 0
                 for pattern in ["dub_*.wav", "dub_*_adj.wav"]:
-                    for file in config.output_segments_dir.glob(pattern):
+                    for file in self.output_segments_dir.glob(pattern):
                         file.unlink()
                         count += 1
                 if count > 0:
@@ -299,13 +308,13 @@ class Pipeline:
                 seg.error_msg = None
 
         # 清理 segments 和 output 目录的文件
-        if config.segments_dir.exists():
-            for f in config.segments_dir.glob("seg_*.wav"):
+        if self.segments_dir.exists():
+            for f in self.segments_dir.glob("seg_*.wav"):
                 f.unlink()
-            for f in config.segments_dir.glob("ref_*.wav"):
+            for f in self.segments_dir.glob("ref_*.wav"):
                 f.unlink()
-        if config.output_segments_dir.exists():
-            for f in config.output_segments_dir.glob("dub_*.wav"):
+        if self.output_segments_dir.exists():
+            for f in self.output_segments_dir.glob("dub_*.wav"):
                 f.unlink()
 
         self.save_manifest()
@@ -370,8 +379,8 @@ class Pipeline:
             raise
         
         finally:
-            # 清理 TTS 引擎
-            if self.tts_engine:
+            # 清理 TTS 引擎（仅在内部创建时卸载，外部传入的由调用方管理）
+            if self.tts_engine and self._owns_tts_engine:
                 self.tts_engine.unload()
     
     def _stage_parse_subtitles(self):
@@ -520,7 +529,7 @@ class Pipeline:
 
         for i, seg in enumerate(self.manifest.segments):
             # 物理路径检查
-            expected_ref = config.segments_dir / f"ref_{seg.id:04d}.wav"
+            expected_ref = self.segments_dir / f"ref_{seg.id:04d}.wav"
             if expected_ref.exists():
                 seg.ref_audio_path = str(expected_ref)
                 skipped += 1
@@ -532,7 +541,7 @@ class Pipeline:
                 ref_audio = self.audio_processor.process_segment(
                     self.manifest.vocal_track,
                     seg,
-                    str(config.segments_dir),
+                    str(self.segments_dir),
                     time_offset=time_offset
                 )
                 seg.ref_audio_path = ref_audio
@@ -570,7 +579,9 @@ class Pipeline:
             return
 
         print(f"  剩余 {len(pending_segments)} 个片段待合成。加载模型中...")
-        self.tts_engine = TTSEngine(lazy_load=True)
+        if self.tts_engine is None:
+            self.tts_engine = TTSEngine(lazy_load=True)
+            self._owns_tts_engine = True
         
         for i, seg in enumerate(self.manifest.segments):
             if seg.status == "success" and seg.output_audio_path and Path(seg.output_audio_path).exists():
@@ -585,7 +596,7 @@ class Pipeline:
                 seg.status = "processing"
                 self.save_manifest()
                 
-                output_path = config.output_segments_dir / f"dub_{seg.id:04d}.wav"
+                output_path = self.output_segments_dir / f"dub_{seg.id:04d}.wav"
                 
                 self.tts_engine.generate(
                     text=seg.target_text,
@@ -622,7 +633,7 @@ class Pipeline:
                                 speed = min(speed, 2.0)
 
                     # 单次 FFmpeg 调用：变速（如需）+ 音量标准化
-                    final_path = config.output_segments_dir / f"dub_{seg.id:04d}_final.wav"
+                    final_path = self.output_segments_dir / f"dub_{seg.id:04d}_final.wav"
                     self.audio_processor.post_process_audio(
                         str(output_path), str(final_path),
                         speed=speed,
