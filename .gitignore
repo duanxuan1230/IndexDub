@@ -12,6 +12,7 @@ build/
 # Runtime artifacts
 temp/
 output/
+input/
 
 # Large model files (user downloads separately)
 index-tts/checkpoints/

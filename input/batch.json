@@ -1,9 +1,16 @@
 {
   "entries": [
     {
-      "video": "input/EP01.mkv",
-      "subtitle": "input/EP01.chs.srt",
-      "status": "pending",
+      "video": "input/Can.This.Love.Be.Translated.S01E02.1080p.WEB.h264-EDITH[EZTVx.to].mkv",
+      "subtitle": "input/Can.This.Love.Be.Translated.S01E02.2026.2160p.NF.WEB-DL.DDP5.1.Atmos.H.265-ColorTV.ass",
+      "status": "completed",
+      "output": "D:\\IndexDub\\output\\Can.This.Love.Be.Translated.S01E02.1080p.WEB.h264-EDITH[EZTVx.to]_dubbed.mp4",
+      "error": null
+    },
+    {
+      "video": "input/Can.This.Love.Be.Translated.S01E03.1080p.WEB.h264-EDITH.mkv",
+      "subtitle": "input/Can.This.Love.Be.Translated.S01E03.2026.2160p.NF.WEB-DL.DDP5.1.Atmos.H.265-ColorTV.ass",
+      "status": "processing",
       "output": null,
       "error": null
     }
